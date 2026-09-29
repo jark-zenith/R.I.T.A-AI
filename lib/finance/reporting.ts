@@ -49,6 +49,20 @@ export function categoryTotals(rows: PeriodTransaction[], kind: "income" | "expe
   return totals;
 }
 
+export function categoryTotalsByCurrency(rows: PeriodTransaction[], kind: "income" | "expense" = "expense") {
+  const totals = new Map<string, Map<string, number>>();
+  for (const row of rows) {
+    if (row.kind !== kind) continue;
+    const currencyTotals = totals.get(row.currency) ?? new Map<string, number>();
+    const key = row.categoryId ?? "uncategorized";
+    const next = (currencyTotals.get(key) ?? 0) + safeMinor(row.amountMinor);
+    if (!Number.isSafeInteger(next)) throw new Error("Category total exceeds the supported range.");
+    currencyTotals.set(key, next);
+    totals.set(row.currency, currencyTotals);
+  }
+  return totals;
+}
+
 export function expectedClosingBalance(
   openingBalanceMinor: number,
   incomeMinor: number,
