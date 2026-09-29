@@ -360,3 +360,88 @@ export async function createBusinessTransaction(formData: FormData) {
   revalidatePath("/");
   redirect("/?saved=business_transaction");
 }
+
+export async function updateTransaction(formData: FormData) {
+  try {
+    const { supabase, user } = await requireUser();
+    const transactionId = asText(formData.get("transaction_id"));
+    const accountId = asText(formData.get("account_id"));
+    const categoryId = asText(formData.get("category_id"));
+    const kind = asText(formData.get("kind"));
+    const amountMinor = asPositiveMinorAmount(formData.get("amount"));
+    const occurredOn = asText(formData.get("occurred_on"));
+    const description = asText(formData.get("description"));
+
+    if (!transactionId || !accountId) throw new Error("Transaction and account are required.");
+    if (kind !== "income" && kind !== "expense") throw new Error("Invalid transaction type.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) throw new Error("Enter a valid transaction date.");
+
+    const { data: account } = await supabase.from("accounts").select("currency").eq("id", accountId).maybeSingle();
+    if (!account) throw new Error("Account not found.");
+
+    if (categoryId) {
+      const { data: category } = await supabase.from("categories").select("kind").eq("id", categoryId).maybeSingle();
+      if (!category || category.kind !== kind) throw new Error("Category does not match transaction type.");
+    }
+
+    const { error } = await supabase
+      .from("transactions")
+      .update({
+        account_id: accountId,
+        category_id: categoryId || null,
+        kind,
+        amount_minor: amountMinor,
+        currency: account.currency,
+        occurred_on: occurredOn,
+        description: description || null,
+      })
+      .eq("id", transactionId)
+      .eq("owner_id", user.id);
+
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    redirect("/transactions?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to update transaction."));
+  }
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/history");
+  redirect("/transactions?saved=updated");
+}
+
+export async function deleteTransaction(formData: FormData) {
+  try {
+    const { supabase, user } = await requireUser();
+    const transactionId = asText(formData.get("transaction_id"));
+    if (!transactionId) throw new Error("Transaction is required.");
+
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .eq("id", transactionId)
+      .eq("owner_id", user.id);
+
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    redirect("/transactions?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to delete transaction."));
+  }
+  revalidatePath("/transactions");
+  revalidatePath("/dashboard");
+  revalidatePath("/history");
+  redirect("/transactions?saved=deleted");
+}
+
+export async function requestAccountDeletion() {
+  const supabase = await createClient();
+  if (!supabase) redirect("/login?error=Supabase%20is%20not%20configured");
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) redirect("/login?error=Please%20sign%20in%20again");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ deletion_requested_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", auth.user.id);
+
+  if (error) redirect("/settings?error=The%20deletion%20request%20could%20not%20be%20recorded");
+  revalidatePath("/settings");
+  redirect("/settings?saved=deletion");
+}
