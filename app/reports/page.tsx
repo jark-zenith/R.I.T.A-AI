@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getVerifiedUser, createClient } from "@/lib/supabase/server";
-import { expectedClosingBalance, periodSummary, categoryTotals, reconciliationDifference } from "@/lib/finance/reporting";
+import { expectedClosingBalance, periodSummary, categoryTotalsByCurrency, reconciliationDifference } from "@/lib/finance/reporting";
 import { formatMoney } from "@/lib/money";
 import { recordReportRun } from "./actions";
 
@@ -39,7 +39,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     currency,
     summary: periodSummary(monthlyTx.filter(row => row.currency === currency)),
   }));
-  const categories = categoryTotals(dailyTx);
+  const categories = categoryTotalsByCurrency(dailyTx);
 
   function openingFor(currency: string) {
     let total = (accounts ?? []).filter(a => a.currency === currency).reduce((sum, a) => sum + Number(a.opening_balance_minor), 0);
@@ -89,7 +89,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
 
         <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Recent report runs</h2><span className="note">{(reports ?? []).length} stored</span></div>{(reports ?? []).length === 0 ? <p className="note">No report runs recorded yet.</p> : <div style={{ display: "grid", gap: 8 }}>{(reports ?? []).map((r, i) => <div className="card" key={i} style={{ padding: 12 }}><strong>{r.report_type}</strong><div className="note">{r.period_start} → {r.period_end} · {r.generated_at}</div></div>)}</div>}</section>
 
-        <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Daily spending categories</h2><span className="note">{categories.size} categories</span></div>{categories.size === 0 ? <p className="note">No expense records for this date.</p> : <div style={{ display: "grid", gap: 8 }}>{Array.from(categories.entries()).map(([key, value]) => <div className="card" key={key} style={{ padding: 12 }}><strong>{key === "uncategorized" ? "Uncategorized" : key}</strong><span className="note" style={{ marginLeft: 10 }}>{value / 100}</span></div>)}</div>}</section>
+        <section className="card" style={{ marginTop: 14 }}>
+          <div className="section-head"><h2>Daily spending categories</h2><span className="note">Currency-scoped</span></div>
+          {categories.size === 0 ? <p className="note">No expense records for this date.</p> : <div style={{ display: "grid", gap: 14 }}>{Array.from(categories.entries()).map(([currency, totals]) => {
+            const max = Math.max(...Array.from(totals.values()), 1);
+            return <div className="card" key={currency} style={{ padding: 14 }}><div className="section-head"><strong>{currency}</strong></div><div style={{ display: "grid", gap: 8 }}>{Array.from(totals.entries()).map(([key, value]) => <div key={key}><div className="section-head" style={{ marginBottom: 5 }}><span>{key === "uncategorized" ? "Uncategorized" : key}</span><span className="note">{formatMoney(value, currency)}</span></div><div style={{ height: 7, borderRadius: 999, background: "#08131a", overflow: "hidden" }}><div style={{ width: (value / max * 100) + "%", height: "100%", background: "var(--accent)" }} /></div></div>)}</div></div>;
+          })}</div>}
+        </section>
       </section>
     </main>
   );
