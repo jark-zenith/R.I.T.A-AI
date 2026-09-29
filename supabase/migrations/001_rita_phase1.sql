@@ -135,3 +135,54 @@ create policy "savings_goals_owner_delete" on public.savings_goals for delete us
 
 create policy "audit_logs_owner_select" on public.audit_logs for select using (owner_id = auth.uid());
 create policy "audit_logs_owner_insert" on public.audit_logs for insert with check (owner_id = auth.uid());
+
+
+-- Keep transaction categories semantically aligned with transaction kind.
+drop policy if exists "transactions_owner_insert" on public.transactions;
+create policy "transactions_owner_insert" on public.transactions for insert with check (
+  owner_id = auth.uid()
+  and exists (select 1 from public.accounts a where a.id = account_id and a.owner_id = auth.uid())
+  and (
+    category_id is null
+    or exists (
+      select 1 from public.categories c
+      where c.id = category_id
+        and c.owner_id = auth.uid()
+        and c.kind = transactions.kind
+    )
+  )
+);
+
+drop policy if exists "transactions_owner_update" on public.transactions;
+create policy "transactions_owner_update" on public.transactions for update using (owner_id = auth.uid()) with check (
+  owner_id = auth.uid()
+  and exists (select 1 from public.accounts a where a.id = account_id and a.owner_id = auth.uid())
+  and (
+    category_id is null
+    or exists (
+      select 1 from public.categories c
+      where c.id = category_id
+        and c.owner_id = auth.uid()
+        and c.kind = transactions.kind
+    )
+  )
+);
+
+-- Automatically create a user profile when an Auth user is created.
+create or replace function public.handle_new_rita_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id) values (new.id)
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_rita on auth.users;
+create trigger on_auth_user_created_rita
+after insert on auth.users
+for each row execute procedure public.handle_new_rita_user();
