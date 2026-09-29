@@ -22,8 +22,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const firstDay = typeof params.start === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.start) ? params.start : day.slice(0, 7) + "-01";
   const lastDay = typeof params.end === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.end) ? params.end : day;
 
-  const [{ data: accounts }, { data: transactions }, { data: transfers }, { data: snapshots }, { data: reports }] = await Promise.all([
+  const [{ data: accounts }, { data: categoriesData }, { data: transactions }, { data: transfers }, { data: snapshots }, { data: reports }] = await Promise.all([
     supabase.from("accounts").select("id,currency,opening_balance_minor"),
+    supabase.from("categories").select("id,name"),
     supabase.from("transactions").select("account_id,kind,amount_minor,currency,occurred_on,category_id").order("occurred_on", { ascending: true }).limit(5000),
     supabase.from("transfers").select("from_account_id,to_account_id,amount_minor,currency,fee_minor,occurred_on").order("occurred_on", { ascending: true }).limit(5000),
     supabase.from("daily_snapshots").select("snapshot_date,currency,opening_balance_minor,income_minor,expense_minor,transfer_in_minor,transfer_out_minor,adjustment_minor,reported_closing_balance_minor,note").eq("snapshot_date", day).order("currency", { ascending: true }),
@@ -39,6 +40,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
     currency,
     summary: periodSummary(monthlyTx.filter(row => row.currency === currency)),
   }));
+  const categoryNames = new Map((categoriesData ?? []).map(c => [c.id, c.name]));
   const categories = categoryTotalsByCurrency(dailyTx);
 
   function openingFor(currency: string) {
