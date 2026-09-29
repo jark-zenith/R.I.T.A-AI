@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { netCashFlow, profitSummary, savingsProjection } from "@/lib/finance/calculations";
-import { assertSafeMinorAmount, sumMinor } from "@/lib/money";
+import { netCashFlow, profitSummary, savingsProjection } from "../lib/finance/calculations";
+import { assertSafeMinorAmount, sumMinor } from "../lib/money";
 
 describe("money", () => {
   it("sums minor units exactly", () => expect(sumMinor([150, 275, 75])).toBe(500));
