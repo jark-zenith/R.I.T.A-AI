@@ -73,6 +73,7 @@ export async function Dashboard({
           <div className="row">
             <ReportMetric title="Transactions" value={String(transactions.length)} /><ReportMetric title="Reconciled" value={String(reconciledCount)} />
           </div>
+          <div style={{ marginTop: 12 }}><a className="button" href="/api/reports/transactions">Export CSV</a><span className="note" style={{ marginLeft: 10 }}>Latest 1,000 transactions</span></div>
           <div className="row" style={{ marginTop: 10 }}>
             <ReportMetric title="Unreconciled" value={String(unreconciled.length)} /><ReportMetric title="Budgets" value={String(budgets.length)} />
           </div>
