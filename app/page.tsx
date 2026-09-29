@@ -22,7 +22,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   ] = await Promise.all([
     supabase.from("accounts").select("id,name,account_type,currency,opening_balance_minor").order("created_at", { ascending: true }),
     supabase.from("categories").select("id,name,kind").order("name", { ascending: true }),
-    supabase.from("transactions").select("id,kind,amount_minor,currency,occurred_on,description,reconciled_at").order("occurred_on", { ascending: false }).limit(100),
+    supabase.from("transactions").select("id,kind,amount_minor,currency,occurred_on,description,reconciled_at,category_id").order("occurred_on", { ascending: false }).limit(100),
     supabase.from("budgets").select("id,category_id,period_start,period_end,amount_minor,currency").order("period_start", { ascending: false }).limit(20),
     supabase.from("savings_goals").select("id,name,target_minor,current_minor,monthly_contribution_minor,target_date,currency").order("created_at", { ascending: false }).limit(20),
     supabase.from("businesses").select("id,name,currency").order("created_at", { ascending: true }),
