@@ -1,53 +1,33 @@
-import { redirect } from "next/navigation";
-import { getVerifiedUser, createClient } from "@/lib/supabase/server";
-import { Dashboard } from "@/components/dashboard";
+import Link from "next/link";
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
-  const user = await getVerifiedUser();
-  if (!user) redirect("/login");
-
-  const supabase = await createClient();
-  if (!supabase) redirect("/login?error=Supabase%20is%20not%20configured");
-
-  const [
-    { data: accounts, error: accountsError },
-    { data: categories, error: categoriesError },
-    { data: transactions, error: transactionsError },
-    { data: budgets, error: budgetsError },
-    { data: savingsGoals, error: savingsError },
-    { data: businesses, error: businessesError },
-    { data: businessTransactions, error: businessTransactionsError },
-  ] = await Promise.all([
-    supabase.from("accounts").select("id,name,account_type,currency,opening_balance_minor").order("created_at", { ascending: true }),
-    supabase.from("categories").select("id,name,kind").order("name", { ascending: true }),
-    supabase.from("transactions").select("id,kind,amount_minor,currency,occurred_on,description,reconciled_at,category_id").order("occurred_on", { ascending: false }).limit(100),
-    supabase.from("budgets").select("id,category_id,period_start,period_end,amount_minor,currency").order("period_start", { ascending: false }).limit(20),
-    supabase.from("savings_goals").select("id,name,target_minor,current_minor,monthly_contribution_minor,target_date,currency").order("created_at", { ascending: false }).limit(20),
-    supabase.from("businesses").select("id,name,currency").order("created_at", { ascending: true }),
-    supabase.from("business_transactions").select("id,business_id,kind,amount_minor,currency,occurred_on,description").order("occurred_on", { ascending: false }).limit(100),
-  ]);
-
-  if (accountsError || categoriesError || transactionsError || budgetsError || savingsError || businessesError || businessTransactionsError) {
-    redirect("/login?error=R.I.T.A%20could%20not%20load%20financial%20records.%20Check%20the%20database%20migrations%20and%20RLS%20configuration.");
-  }
-
-  const params = await searchParams;
-  const error = typeof params.error === "string" ? params.error : "";
-  const saved = typeof params.saved === "string" ? params.saved : "";
-
+export default function LandingPage() {
   return (
-    <Dashboard
-      userEmail={user.email ?? ""}
-      accounts={accounts ?? []}
-      categories={categories ?? []}
-      transactions={transactions ?? []}
-      budgets={budgets ?? []}
-      savingsGoals={savingsGoals ?? []}
-      businesses={businesses ?? []}
-      businessTransactions={businessTransactions ?? []}
-      message={error || saved}
-    />
+    <main className="login-wrap">
+      <section className="card login-card">
+        <div className="brand">
+          <div className="brand-mark">R</div>
+          <div className="brand-copy">
+            <strong>R.I.T.A AI</strong>
+            <span>Revenue Intelligence &amp; Transaction Assistant</span>
+          </div>
+        </div>
+        <div className="eyebrow">Personal &amp; small-business finance</div>
+        <h1 style={{ fontSize: 38 }}>Your money, recorded clearly.</h1>
+        <p className="subtitle">
+          R.I.T.A stores the financial information you provide, calculates from structured records,
+          and keeps each user&apos;s workspace private.
+        </p>
+        <div className="grid content" style={{ marginTop: 18 }}>
+          <div className="card"><strong>Private workspace</strong><p className="note">Each account is isolated with server-side authorization and database row-level security.</p></div>
+          <div className="card"><strong>Deterministic reports</strong><p className="note">Income, expenses, budgets, savings, reconciliation, and business P&amp;L come from stored records.</p></div>
+          <div className="card"><strong>No fabricated balances</strong><p className="note">R.I.T.A never pretends to observe an account unless an authorized integration supplies the data.</p></div>
+        </div>
+        <div className="row" style={{ marginTop: 18 }}>
+          <Link className="button" href="/login">Sign in / Create account</Link>
+          <Link className="button" href="/privacy" style={{ background: "#111d25", color: "#edf4f7", border: "1px solid #29404b" }}>Privacy</Link>
+        </div>
+        <p className="note" style={{ marginTop: 16 }}>KES is the initial default currency. Other currencies are supported only when explicitly recorded.</p>
+      </section>
+    </main>
   );
 }
