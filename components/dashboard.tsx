@@ -34,7 +34,7 @@ export async function Dashboard({
   budgets: Budget[]; savingsGoals: SavingsGoal[]; businesses: Business[]; businessTransactions: BusinessTransaction[];
   message: string;
 }) {
-  const personal = summarizePersonalFlow(transactions);
+  const personal = summarizePersonalFlow(transactions.map(tx => ({ kind: tx.kind, amountMinor: tx.amount_minor })));
   const totalOpening = accounts.reduce((sum, account) => sum + minor(account.opening_balance_minor), 0);
   const reconciledCount = transactions.filter(tx => tx.reconciled_at).length;
   const unreconciled = transactions.filter(tx => !tx.reconciled_at);
@@ -110,7 +110,7 @@ export async function Dashboard({
           <div className="section-head"><h2>Business profit &amp; loss</h2><span className="note">{businesses.length} profile{businesses.length === 1 ? "" : "s"}</span></div>
           {businesses.length === 0 ? <div className="empty"><div><strong>No business profile yet.</strong><p>Add a business above to separate revenue and business costs from personal finance.</p></div></div> : (
             <div className="grid content">{businesses.map(business => {
-              const summary = summarizeBusinessProfit(businessTransactions.filter(tx => tx.business_id === business.id));
+              const summary = summarizeBusinessProfit(businessTransactions.filter(tx => tx.business_id === business.id).map(tx => ({ kind: tx.kind, amountMinor: tx.amount_minor })));
               return <div className="card" key={business.id}><div className="section-head"><h2>{business.name}</h2><span className="status">{business.currency}</span></div><div className="row"><ReportMetric title="Gross profit" value={formatMoney(summary.grossProfitMinor, business.currency)} /><ReportMetric title="Net profit" value={formatMoney(summary.netProfitMinor, business.currency)} /></div><div className="kicker" style={{ marginTop: 10 }}>Net margin {summary.margin.toFixed(1)}% · calculated from recorded business transactions.</div></div>;
             })}</div>
           )}
