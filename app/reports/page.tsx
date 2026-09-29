@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getVerifiedUser, createClient } from "@/lib/supabase/server";
 import { expectedClosingBalance, periodSummary, categoryTotals, reconciliationDifference } from "@/lib/finance/reporting";
+import { formatMoney } from "@/lib/money";
 import { recordReportRun } from "./actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -41,16 +42,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   function openingFor(currency: string) {
     let total = (accounts ?? []).filter(a => a.currency === currency).reduce((sum, a) => sum + Number(a.opening_balance_minor), 0);
     for (const row of tx) if (row.currency === currency && row.occurredOn < day) total += row.kind === "income" ? Number(row.amountMinor) : -Number(row.amountMinor);
-    for (const row of transfers ?? []) if (row.currency === currency && row.occurred_on < day) total += Number(row.to_account_id && row.to_account_id ? row.amount_minor : 0) - Number(row.from_account_id ? row.amount_minor : 0) - Number(row.fee_minor);
+    for (const row of transfers ?? []) if (row.currency === currency && row.occurred_on < day) total -= Number(row.fee_minor);
     return total;
   }
 
-  const txTransfer = (transfers ?? []).filter(t => t.occurred_on === day);
-  const transferIn = txTransfer.reduce((sum, t) => sum + Number(t.amount_minor), 0);
-  const transferOut = txTransfer.reduce((sum, t) => sum + Number(t.amount_minor) + Number(t.fee_minor), 0);
   const reportRows = currencies.map(currency => {
     const rows = dailyTx.filter(t => t.currency === currency);
     const sum = periodSummary(rows);
+    const dailyTransfers = (transfers ?? []).filter(t => t.occurred_on === day && t.currency === currency);
+    const transferIn = dailyTransfers.reduce((sum, t) => sum + Number(t.amount_minor), 0);
+    const transferOut = dailyTransfers.reduce((sum, t) => sum + Number(t.amount_minor) + Number(t.fee_minor), 0);
     const snap = snapshotByCurrency.get(currency);
     const expected = expectedClosingBalance(openingFor(currency), sum.incomeMinor, sum.expenseMinor, transferIn, transferOut, Number(snap?.adjustment_minor ?? 0));
     const difference = reconciliationDifference(expected, snap?.reported_closing_balance_minor == null ? null : Number(snap.reported_closing_balance_minor));
@@ -73,10 +74,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
         </div>
 
         <section className="grid content" style={{ marginTop: 14 }}>
-          {reportRows.map(row => <div className="card" key={row.currency}><div className="section-head"><h2>{row.currency} daily report</h2><span className="status">{row.difference === null ? "No closing check" : row.difference === 0 ? "Reconciled" : "Difference found"}</span></div><div className="row"><ReportMetric title="Opening" value={String(row.opening / 100)} /><ReportMetric title="Income" value={String(row.incomeMinor / 100)} /><ReportMetric title="Expenses" value={String(row.expenseMinor / 100)} /><ReportMetric title="Expected closing" value={String(row.expected / 100)} /></div><p className="note">Amounts above are minor-unit-derived; use the stored currency for interpretation. {row.reported === null ? "No user-reported closing balance was stored." : row.difference === 0 ? "User-reported closing balance matches the calculated expectation." : "The reported closing balance differs by " + String(Math.abs((row.difference ?? 0) / 100)) + " " + row.currency + ". Review the snapshot rather than changing historical transactions."}</p></div>)}
+          {reportRows.map(row => <div className="card" key={row.currency}><div className="section-head"><h2>{row.currency} daily report</h2><span className="status">{row.difference === null ? "No closing check" : row.difference === 0 ? "Reconciled" : "Difference found"}</span></div><div className="row"><ReportMetric title="Opening" value={formatMoney(row.opening, row.currency)} /><ReportMetric title="Income" value={formatMoney(row.incomeMinor, row.currency)} /><ReportMetric title="Expenses" value={formatMoney(row.expenseMinor, row.currency)} /><ReportMetric title="Expected closing" value={formatMoney(row.expected, row.currency)} /></div><p className="note">Amounts above are minor-unit-derived; use the stored currency for interpretation. {row.reported === null ? "No user-reported closing balance was stored." : row.difference === 0 ? "User-reported closing balance matches the calculated expectation." : "The reported closing balance differs by " + formatMoney(Math.abs(row.difference ?? 0), row.currency) + ". Review the snapshot rather than changing historical transactions."}</p></div>)}
         </section>
 
-        <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Monthly period</h2><span className="note">{firstDay} → {lastDay}</span></div><div className="row"><ReportMetric title="Income" value={String(monthly.incomeMinor / 100)} /><ReportMetric title="Expenses" value={String(monthly.expenseMinor / 100)} /><ReportMetric title="Net cash flow" value={String(monthly.netMinor / 100)} /></div><div style={{ marginTop: 12 }}><form action={recordReportRun}><input type="hidden" name="report_type" value="monthly" /><input type="hidden" name="period_start" value={firstDay} /><input type="hidden" name="period_end" value={lastDay} /><button className="button" type="submit">Record monthly report run</button></form></div></section>
+        <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Monthly period</h2><span className="note">{firstDay} → {lastDay}</span></div><div className="row"><ReportMetric title="Income" value={formatMoney(monthly.incomeMinor, "KES")} /><ReportMetric title="Expenses" value={formatMoney(monthly.expenseMinor, "KES")} /><ReportMetric title="Net cash flow" value={formatMoney(monthly.netMinor, "KES")} /></div><div style={{ marginTop: 12 }}><form action={recordReportRun}><input type="hidden" name="report_type" value="monthly" /><input type="hidden" name="period_start" value={firstDay} /><input type="hidden" name="period_end" value={lastDay} /><button className="button" type="submit">Record monthly report run</button></form></div></section>
 
         <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Daily report run</h2><span className="note">Timezone: Africa/Nairobi</span></div><form action={recordReportRun}><input type="hidden" name="report_type" value="daily" /><input type="hidden" name="period_start" value={day} /><input type="hidden" name="period_end" value={day} /><button className="button" type="submit">Record daily report run</button></form></section>
 
