@@ -1,7 +1,10 @@
+import { randomUUID } from "crypto";
 import { createAccount, createCategory, createTransaction } from "@/app/actions/finance";
 
 type Account = { id: string; name: string; account_type: string; currency: string };
 type Category = { id: string; name: string; kind: "income" | "expense" };
+
+const currencyOptions = ["KES", "USD", "EUR", "GBP", "UGX", "TZS"];
 
 export function SetupForms({ accounts, categories }: { accounts: Account[]; categories: Category[] }) {
   return (
@@ -14,8 +17,9 @@ export function SetupForms({ accounts, categories }: { accounts: Account[]; cate
             <label>Type<select name="account_type" defaultValue="cash">
               <option value="cash">Cash</option><option value="bank">Bank</option><option value="mobile_money">Mobile money</option><option value="other">Other</option>
             </select></label>
-            <label>Opening balance (KES)<input name="opening_balance" inputMode="decimal" defaultValue="0" /></label>
+            <label>Currency<select name="currency" defaultValue="KES">{currencyOptions.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
           </div>
+          <label>Opening balance<input name="opening_balance" inputMode="decimal" defaultValue="0" /></label>
           <button className="button" type="submit">Save account</button>
         </form>
       </div>
@@ -37,11 +41,12 @@ export function SetupForms({ accounts, categories }: { accounts: Account[]; cate
           <div className="empty"><div><strong>Create an account first.</strong><p>R.I.T.A will not save a transaction without an owned account.</p></div></div>
         ) : (
           <form className="form" action={createTransaction}>
+            <input type="hidden" name="submission_id" value={randomUUID()} />
             <div className="row">
               <label>Type<select name="kind" defaultValue="expense">
                 <option value="expense">Expense</option><option value="income">Income</option>
               </select></label>
-              <label>Amount (KES)<input name="amount" inputMode="decimal" placeholder="0.00" required /></label>
+              <label>Amount<input name="amount" inputMode="decimal" placeholder="0.00" required /></label>
             </div>
             <div className="row">
               <label>Account<select name="account_id" defaultValue={accounts[0].id} required>
@@ -53,7 +58,7 @@ export function SetupForms({ accounts, categories }: { accounts: Account[]; cate
               </select></label>
             </div>
             <div className="row">
-              <label>Date<input type="date" name="occurred_on" defaultValue={new Date().toISOString().slice(0, 10)} required /></label>
+              <label>Date<input type="date" name="occurred_on" required /></label>
               <label>Description<input name="description" placeholder="Optional note" /></label>
             </div>
             <button className="button" type="submit">Save transaction</button>
