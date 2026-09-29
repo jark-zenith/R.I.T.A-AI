@@ -9,12 +9,14 @@ export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(url, key, {
     cookies: {
-      getAll() { return cookieStore.getAll(); },
+      getAll() {
+        return cookieStore.getAll();
+      },
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
         } catch {
-          // Server Components may not write cookies; proxy handles refresh.
+          // Cookie writes from Server Components may fail; the root proxy handles refresh.
         }
       },
     },
@@ -24,7 +26,9 @@ export async function createClient() {
 export async function getVerifiedUser() {
   const supabase = await createClient();
   if (!supabase) return null;
+
   const { data, error } = await supabase.auth.getUser();
   if (error) return null;
+
   return data.user;
 }
