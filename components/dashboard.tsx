@@ -54,7 +54,7 @@ export function Dashboard({
   const balances = calculateAccountBalances(
     accounts.map(a => ({ id: a.id, currency: a.currency, openingBalanceMinor: a.opening_balance_minor })),
     transactions.map(tx => ({ accountId: tx.account_id, currency: tx.currency, kind: tx.kind, amountMinor: tx.amount_minor })),
-    transfers,
+    transfers.map(t => ({ fromAccountId: t.from_account_id, toAccountId: t.to_account_id, amountMinor: t.amount_minor, currency: t.currency, feeMinor: t.fee_minor })),
   );
   const currencyTotals = groupBalancesByCurrency(accounts.map(a => ({ id: a.id, currency: a.currency, openingBalanceMinor: a.opening_balance_minor })), balances);
   const reconciledCount = transactions.filter(tx => tx.reconciled_at).length;
