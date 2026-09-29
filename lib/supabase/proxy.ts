@@ -23,7 +23,7 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
   const pathname = request.nextUrl.pathname;
-  const publicPath = pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const publicPath = pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/auth") || pathname === "/privacy" || pathname === "/terms" || pathname === "/api/health";
 
   if (!user && !publicPath) {
     const redirectUrl = request.nextUrl.clone();
