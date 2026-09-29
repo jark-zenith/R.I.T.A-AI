@@ -21,7 +21,7 @@ async function appOrigin() {
   return forwardedProto + "://" + host;
 }
 
-function authError() {
+function authError(): never {
   redirect("/login?error=Authentication%20could%20not%20be%20completed.%20Check%20your%20details%20and%20try%20again.");
 }
 
