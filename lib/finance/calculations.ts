@@ -29,6 +29,15 @@ export function savingsProjection(currentMinor: number, monthlyContributionMinor
   return assertSafe(currentMinor + monthlyContributionMinor * months);
 }
 
+export function monthsToSavingsGoal(currentMinor: number, targetMinor: number, monthlyContributionMinor: number): number | null {
+  if (![currentMinor, targetMinor, monthlyContributionMinor].every(Number.isSafeInteger)) {
+    throw new Error("Savings values must be safe integers.");
+  }
+  if (currentMinor >= targetMinor) return 0;
+  if (monthlyContributionMinor <= 0) return null;
+  return Math.ceil((targetMinor - currentMinor) / monthlyContributionMinor);
+}
+
 export function profitSummary(revenueMinor: number, directCostsMinor: number, operatingExpensesMinor: number) {
   assertSafe(revenueMinor);
   assertSafe(directCostsMinor);
