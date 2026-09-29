@@ -5,7 +5,7 @@ export function assertSafeMinorAmount(amountMinor: number): number {
   return amountMinor;
 }
 
-export function formatMoney(amountMinor: number, currency = DEFAULT_CURRENCY): string {
+export function formatMoney(amountMinor: number, currency: string = DEFAULT_CURRENCY): string {
   assertSafeMinorAmount(amountMinor);
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
