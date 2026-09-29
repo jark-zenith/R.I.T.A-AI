@@ -153,11 +153,11 @@ export async function createAccount(formData: FormData) {
 
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to create account."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to create account."));
   }
 
-  revalidatePath("/");
-  redirect("/?saved=account");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=account");
 }
 
 export async function createCategory(formData: FormData) {
@@ -172,11 +172,11 @@ export async function createCategory(formData: FormData) {
     const { error } = await supabase.from("categories").insert({ owner_id: user.id, name, kind });
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to create category."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to create category."));
   }
 
-  revalidatePath("/");
-  redirect("/?saved=category");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=category");
 }
 
 export async function createTransaction(formData: FormData) {
@@ -218,11 +218,11 @@ export async function createTransaction(formData: FormData) {
 
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save transaction."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save transaction."));
   }
 
-  revalidatePath("/");
-  redirect("/?saved=transaction");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=transaction");
 }
 
 export async function signOut() {
@@ -256,10 +256,10 @@ export async function createBudget(formData: FormData) {
     });
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save budget."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save budget."));
   }
-  revalidatePath("/");
-  redirect("/?saved=budget");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=budget");
 }
 
 export async function createSavingsGoal(formData: FormData) {
@@ -285,10 +285,10 @@ export async function createSavingsGoal(formData: FormData) {
     });
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save savings goal."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save savings goal."));
   }
-  revalidatePath("/");
-  redirect("/?saved=savings");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=savings");
 }
 
 export async function reconcileTransaction(formData: FormData) {
@@ -306,10 +306,10 @@ export async function reconcileTransaction(formData: FormData) {
 
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to reconcile transaction."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to reconcile transaction."));
   }
-  revalidatePath("/");
-  redirect("/?saved=reconciled");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=reconciled");
 }
 
 export async function createBusiness(formData: FormData) {
@@ -325,10 +325,10 @@ export async function createBusiness(formData: FormData) {
     });
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to create business."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to create business."));
   }
-  revalidatePath("/");
-  redirect("/?saved=business");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=business");
 }
 
 export async function createBusinessTransaction(formData: FormData) {
@@ -351,16 +351,16 @@ export async function createBusinessTransaction(formData: FormData) {
       business_id: businessId,
       kind,
       amount_minor: amountMinor,
-      currency: "KES",
+      currency: business.currency,
       occurred_on: occurredOn,
       description: description || null,
     });
     if (error) throw new Error(error.message);
   } catch (error) {
-    redirect("/?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save business transaction."));
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save business transaction."));
   }
-  revalidatePath("/");
-  redirect("/?saved=business_transaction");
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=business_transaction");
 }
 
 export async function updateTransaction(formData: FormData) {
