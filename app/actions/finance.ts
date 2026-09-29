@@ -24,6 +24,103 @@ function asPositiveMinorAmount(value: FormDataEntryValue | null) {
   return asMinorAmount(value, { positive: true });
 }
 
+function asCurrency(value: FormDataEntryValue | null) {
+  const currency = asText(value).toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) throw new Error("Use a valid 3-letter currency code.");
+  return currency;
+}
+
+function asOptionalUuid(value: FormDataEntryValue | null) {
+  const raw = asText(value);
+  if (!raw) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)) throw new Error("Invalid submission identifier.");
+  return raw;
+}
+
+export async function createTransfer(formData: FormData) {
+  try {
+    const { supabase, user } = await requireUser();
+    const fromAccountId = asText(formData.get("from_account_id"));
+    const toAccountId = asText(formData.get("to_account_id"));
+    const amountMinor = asPositiveMinorAmount(formData.get("amount"));
+    const feeMinor = asMinorAmount(formData.get("fee") || "0", { positive: false });
+    const occurredOn = asText(formData.get("occurred_on"));
+    const description = asText(formData.get("description"));
+    const clientSubmissionId = asOptionalUuid(formData.get("submission_id"));
+
+    if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) throw new Error("Choose two different accounts.");
+    if (feeMinor < 0) throw new Error("Transfer fee cannot be negative.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) throw new Error("Enter a valid transfer date.");
+
+    const { data: source } = await supabase.from("accounts").select("id,currency").eq("id", fromAccountId).maybeSingle();
+    const { data: destination } = await supabase.from("accounts").select("id,currency").eq("id", toAccountId).maybeSingle();
+    if (!source || !destination || source.currency !== destination.currency) {
+      throw new Error("Transfers must stay within the same currency.");
+    }
+
+    const { error } = await supabase.from("transfers").insert({
+      owner_id: user.id,
+      from_account_id: fromAccountId,
+      to_account_id: toAccountId,
+      amount_minor: amountMinor,
+      currency: source.currency,
+      fee_minor: feeMinor,
+      occurred_on: occurredOn,
+      description: description || null,
+      client_submission_id: clientSubmissionId,
+    });
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save transfer."));
+  }
+  revalidatePath("/dashboard");
+  redirect("/dashboard?saved=transfer");
+}
+
+export async function saveDailySnapshot(formData: FormData) {
+  try {
+    const { supabase, user } = await requireUser();
+    const snapshotDate = asText(formData.get("snapshot_date"));
+    const currency = asCurrency(formData.get("currency"));
+    const openingMinor = asMinorAmount(formData.get("opening_balance"), { positive: false });
+    const incomeMinor = asMinorAmount(formData.get("income") || "0", { positive: false });
+    const expenseMinor = asMinorAmount(formData.get("expense") || "0", { positive: false });
+    const transferInMinor = asMinorAmount(formData.get("transfer_in") || "0", { positive: false });
+    const transferOutMinor = asMinorAmount(formData.get("transfer_out") || "0", { positive: false });
+    const adjustmentMinor = asMinorAmount(formData.get("adjustment") || "0", { positive: false });
+    const reportedClosing = asText(formData.get("reported_closing"));
+    const note = asText(formData.get("note"));
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate)) throw new Error("Enter a valid snapshot date.");
+    if ([incomeMinor, expenseMinor, transferInMinor, transferOutMinor].some(v => v < 0)) {
+      throw new Error("Income, expense and transfer totals cannot be negative.");
+    }
+    const reportedClosingMinor = reportedClosing ? asMinorAmount(reportedClosing, { positive: false }) : null;
+
+    const { error } = await supabase.from("daily_snapshots").upsert({
+      owner_id: user.id,
+      snapshot_date: snapshotDate,
+      currency,
+      opening_balance_minor: openingMinor,
+      income_minor: incomeMinor,
+      expense_minor: expenseMinor,
+      transfer_in_minor: transferInMinor,
+      transfer_out_minor: transferOutMinor,
+      adjustment_minor: adjustmentMinor,
+      reported_closing_balance_minor: reportedClosingMinor,
+      source: "manual",
+      note: note || null,
+    }, { onConflict: "owner_id,snapshot_date,currency" });
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    redirect("/dashboard?error=" + encodeURIComponent(error instanceof Error ? error.message : "Unable to save daily snapshot."));
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  redirect("/dashboard?saved=daily");
+}
+
+
 async function requireUser() {
   const supabase = await createClient();
   if (!supabase) redirect("/login?error=Supabase%20is%20not%20configured");
@@ -40,6 +137,7 @@ export async function createAccount(formData: FormData) {
     const name = asText(formData.get("name"));
     const accountType = asText(formData.get("account_type"));
     const openingBalanceMinor = asMinorAmount(formData.get("opening_balance") || "0", { positive: false });
+    const currency = asCurrency(formData.get("currency") || "KES");
 
     if (!name) throw new Error("Account name is required.");
     if (!["cash", "bank", "mobile_money", "other"].includes(accountType)) throw new Error("Invalid account type.");
@@ -49,7 +147,7 @@ export async function createAccount(formData: FormData) {
       owner_id: user.id,
       name,
       account_type: accountType,
-      currency: "KES",
+      currency,
       opening_balance_minor: openingBalanceMinor,
     });
 
@@ -86,6 +184,7 @@ export async function createTransaction(formData: FormData) {
     const { supabase, user } = await requireUser();
     const accountId = asText(formData.get("account_id"));
     const categoryId = asText(formData.get("category_id"));
+    const clientSubmissionId = asOptionalUuid(formData.get("submission_id"));
     const kind = asText(formData.get("kind"));
     const occurredOn = asText(formData.get("occurred_on"));
     const description = asText(formData.get("description"));
@@ -96,15 +195,25 @@ export async function createTransaction(formData: FormData) {
 
     const amountMinor = asPositiveMinorAmount(formData.get("amount"));
 
+    const { data: account } = await supabase.from("accounts").select("currency").eq("id", accountId).maybeSingle();
+    if (!account) throw new Error("Account not found.");
+    if (categoryId) {
+      const { data: category } = await supabase.from("categories").select("kind").eq("id", categoryId).maybeSingle();
+      if (!category || category.kind !== kind) throw new Error("Category does not match transaction type.");
+    }
+
     const { error } = await supabase.from("transactions").insert({
       owner_id: user.id,
       account_id: accountId,
       category_id: categoryId || null,
       kind,
       amount_minor: amountMinor,
-      currency: "KES",
+      currency: account.currency,
       occurred_on: occurredOn,
       description: description || null,
+      client_submission_id: clientSubmissionId,
+      source: "manual",
+      detail_level: "transaction",
     });
 
     if (error) throw new Error(error.message);
