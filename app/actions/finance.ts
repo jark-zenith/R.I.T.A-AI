@@ -343,6 +343,8 @@ export async function createBusinessTransaction(formData: FormData) {
     if (!businessId) throw new Error("Select a business.");
     if (!["revenue", "direct_cost", "operating_expense"].includes(kind)) throw new Error("Invalid business transaction type.");
     if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(occurredOn)) throw new Error("Enter a valid date.");
+    const { data: business } = await supabase.from("businesses").select("currency").eq("id", businessId).maybeSingle();
+    if (!business) throw new Error("Business not found.");
 
     const { error } = await supabase.from("business_transactions").insert({
       owner_id: user.id,
