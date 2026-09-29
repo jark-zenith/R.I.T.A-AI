@@ -8,12 +8,20 @@ function asText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
 }
 
+function asMinorAmount(value: FormDataEntryValue | null, options: { positive?: boolean } = {}) {
+  const raw = asText(value);
+  if (!/^-?\\d+(\\.\\d{1,2})?$/.test(raw)) throw new Error("Enter an amount with up to 2 decimal places.");
+  const negative = raw.startsWith("-");
+  const normalized = negative ? raw.slice(1) : raw;
+  const [whole, fraction = ""] = normalized.split(".");
+  const minor = Number(whole) * 100 + Number((fraction + "00").slice(0, 2));
+  if (!Number.isSafeInteger(minor)) throw new Error("Amount is outside the supported range.");
+  if (options.positive !== false && (negative || minor <= 0)) throw new Error("Enter a valid amount greater than zero.");
+  return negative ? -minor : minor;
+}
+
 function asPositiveMinorAmount(value: FormDataEntryValue | null) {
-  const amount = Number(asText(value));
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error("Enter a valid amount greater than zero.");
-  const minor = Math.round(amount * 100);
-  if (!Number.isSafeInteger(minor) || minor <= 0) throw new Error("Amount is outside the supported range.");
-  return minor;
+  return asMinorAmount(value, { positive: true });
 }
 
 async function requireUser() {
@@ -31,14 +39,12 @@ export async function createAccount(formData: FormData) {
     const { supabase, user } = await requireUser();
     const name = asText(formData.get("name"));
     const accountType = asText(formData.get("account_type"));
-    const openingBalance = Number(asText(formData.get("opening_balance") || "0"));
+    const openingBalanceMinor = asMinorAmount(formData.get("opening_balance") || "0", { positive: false });
 
     if (!name) throw new Error("Account name is required.");
     if (!["cash", "bank", "mobile_money", "other"].includes(accountType)) throw new Error("Invalid account type.");
     if (!Number.isFinite(openingBalance)) throw new Error("Invalid opening balance.");
 
-    const openingBalanceMinor = Math.round(openingBalance * 100);
-    if (!Number.isSafeInteger(openingBalanceMinor)) throw new Error("Opening balance is outside the supported range.");
 
     const { error } = await supabase.from("accounts").insert({
       owner_id: user.id,
@@ -153,21 +159,12 @@ export async function createSavingsGoal(formData: FormData) {
     const { supabase, user } = await requireUser();
     const name = asText(formData.get("name"));
     const targetMinor = asPositiveMinorAmount(formData.get("target"));
-    const currentRaw = Number(asText(formData.get("current") || "0"));
-    const monthlyRaw = Number(asText(formData.get("monthly") || "0"));
+    const currentMinor = asMinorAmount(formData.get("current") || "0", { positive: false });
+    const monthlyContributionMinor = asMinorAmount(formData.get("monthly") || "0", { positive: false });
     const targetDate = asText(formData.get("target_date"));
 
     if (!name) throw new Error("Savings goal name is required.");
-    if (!Number.isFinite(currentRaw) || currentRaw < 0 || !Number.isFinite(monthlyRaw) || monthlyRaw < 0) {
-      throw new Error("Savings values must be non-negative.");
-    }
-
-    const currentMinor = Math.round(currentRaw * 100);
-    const monthlyContributionMinor = Math.round(monthlyRaw * 100);
-
-    if (!Number.isSafeInteger(currentMinor) || !Number.isSafeInteger(monthlyContributionMinor)) {
-      throw new Error("Savings value is outside the supported range.");
-    }
+    if (currentMinor < 0 || monthlyContributionMinor < 0) throw new Error("Savings values must be non-negative.");
 
     const { error } = await supabase.from("savings_goals").insert({
       owner_id: user.id,
