@@ -33,14 +33,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const tx = (transactions ?? []).map(row => ({ accountId: row.account_id, categoryId: row.category_id, kind: row.kind as "income" | "expense", amountMinor: row.amount_minor, currency: row.currency, occurredOn: row.occurred_on }));
   const dailyTx = tx.filter(row => row.occurredOn === day);
   const monthlyTx = tx.filter(row => row.occurredOn >= firstDay && row.occurredOn <= lastDay);
-  const daily = periodSummary(dailyTx);
+  const snapshotByCurrency = new Map((snapshots ?? []).map(s => [s.currency, s]));
+  const currencies = Array.from(new Set((accounts ?? []).map(a => a.currency).concat(dailyTx.map(t => t.currency))));
   const monthlyByCurrency = currencies.map(currency => ({
     currency,
     summary: periodSummary(monthlyTx.filter(row => row.currency === currency)),
   }));
   const categories = categoryTotals(dailyTx);
-  const snapshotByCurrency = new Map((snapshots ?? []).map(s => [s.currency, s]));
-  const currencies = Array.from(new Set((accounts ?? []).map(a => a.currency).concat(dailyTx.map(t => t.currency))));
 
   function openingFor(currency: string) {
     let total = (accounts ?? []).filter(a => a.currency === currency).reduce((sum, a) => sum + Number(a.opening_balance_minor), 0);
