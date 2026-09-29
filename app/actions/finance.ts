@@ -43,8 +43,7 @@ export async function createAccount(formData: FormData) {
 
     if (!name) throw new Error("Account name is required.");
     if (!["cash", "bank", "mobile_money", "other"].includes(accountType)) throw new Error("Invalid account type.");
-    if (!Number.isFinite(openingBalance)) throw new Error("Invalid opening balance.");
-
+    
 
     const { error } = await supabase.from("accounts").insert({
       owner_id: user.id,
