@@ -8,7 +8,9 @@ import {
 
 type Account = { id: string; name: string; currency: string };
 type Category = { id: string; name: string; kind: "income" | "expense" };
-type Business = { id: string; name: string };
+type Business = { id: string; name: string; currency: string };
+
+const currencies = ["KES", "USD", "EUR", "GBP", "UGX", "TZS"];
 
 export function Phase2Forms({
   accounts,
@@ -22,6 +24,7 @@ export function Phase2Forms({
   unreconciledTransactions: Array<{ id: string; description: string | null; occurred_on: string; amount_minor: number | string }>;
 }) {
   const expenseCategories = categories.filter(c => c.kind === "expense");
+  const accountCurrencies = Array.from(new Set(accounts.map(a => a.currency)));
 
   return (
     <>
@@ -32,10 +35,13 @@ export function Phase2Forms({
             <form className="form" action={createBudget}>
               <label>Category<select name="category_id" required>{expenseCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
               <div className="row">
-                <label>Amount (KES)<input name="amount" inputMode="decimal" required /></label>
-                <label>Start<input name="period_start" type="date" required /></label>
+                <label>Amount<input name="amount" inputMode="decimal" required /></label>
+                <label>Currency<select name="currency" defaultValue="KES">{currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
               </div>
-              <label>End<input name="period_end" type="date" required /></label>
+              <div className="row">
+                <label>Start<input name="period_start" type="date" required /></label>
+                <label>End<input name="period_end" type="date" required /></label>
+              </div>
               <button className="button" type="submit">Save budget</button>
             </form>
           )}
@@ -46,13 +52,14 @@ export function Phase2Forms({
           <form className="form" action={createSavingsGoal}>
             <label>Name<input name="name" placeholder="Emergency fund" required /></label>
             <div className="row">
-              <label>Target (KES)<input name="target" inputMode="decimal" required /></label>
-              <label>Current (KES)<input name="current" inputMode="decimal" defaultValue="0" /></label>
+              <label>Target<input name="target" inputMode="decimal" required /></label>
+              <label>Currency<select name="currency" defaultValue="KES">{accountCurrencies.length ? accountCurrencies.map(c => <option key={c} value={c}>{c}</option>) : currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
             </div>
             <div className="row">
-              <label>Monthly (KES)<input name="monthly" inputMode="decimal" defaultValue="0" /></label>
-              <label>Target date<input name="target_date" type="date" /></label>
+              <label>Current<input name="current" inputMode="decimal" defaultValue="0" /></label>
+              <label>Monthly<input name="monthly" inputMode="decimal" defaultValue="0" /></label>
             </div>
+            <label>Target date<input name="target_date" type="date" /></label>
             <button className="button" type="submit">Save goal</button>
           </form>
         </div>
@@ -77,19 +84,19 @@ export function Phase2Forms({
           <div className="section-head"><h2>Business profile</h2><span className="note">P&amp;L</span></div>
           <form className="form" action={createBusiness}>
             <label>Business name<input name="name" placeholder="JARK AITech Labs" required /></label>
+            <label>Currency<select name="currency" defaultValue="KES">{currencies.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
             <button className="button" type="submit">Add business</button>
           </form>
-          {businesses.length > 0 ? <p className="note" style={{ marginTop: 12 }}>{businesses.length} business profile{businesses.length === 1 ? "" : "s"} available.</p> : null}
         </div>
 
         <div className="card">
           <div className="section-head"><h2>Business transaction</h2><span className="note">P&amp;L input</span></div>
           {businesses.length === 0 ? <div className="empty"><div><strong>Create a business first.</strong><p>Business revenue and costs are kept separate from personal transactions.</p></div></div> : (
             <form className="form" action={createBusinessTransaction}>
-              <label>Business<select name="business_id" required>{businesses.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+              <label>Business<select name="business_id" required>{businesses.map(b => <option key={b.id} value={b.id}>{b.name} · {b.currency}</option>)}</select></label>
               <div className="row">
                 <label>Type<select name="kind" defaultValue="revenue"><option value="revenue">Revenue</option><option value="direct_cost">Direct cost</option><option value="operating_expense">Operating expense</option></select></label>
-                <label>Amount (KES)<input name="amount" inputMode="decimal" required /></label>
+                <label>Amount<input name="amount" inputMode="decimal" required /></label>
               </div>
               <label>Date<input type="date" name="occurred_on" required /></label>
               <label>Description<input name="description" placeholder="Optional note" /></label>
