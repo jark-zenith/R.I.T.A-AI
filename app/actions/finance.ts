@@ -240,6 +240,7 @@ export async function createBudget(formData: FormData) {
     const periodStart = asText(formData.get("period_start"));
     const periodEnd = asText(formData.get("period_end"));
     const amountMinor = asPositiveMinorAmount(formData.get("amount"));
+    const currency = asCurrency(formData.get("currency") || "KES");
 
     if (!categoryId) throw new Error("Select an expense category.");
     if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(periodStart) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(periodEnd) || periodEnd < periodStart) {
@@ -252,7 +253,7 @@ export async function createBudget(formData: FormData) {
       period_start: periodStart,
       period_end: periodEnd,
       amount_minor: amountMinor,
-      currency: "KES",
+      currency,
     });
     if (error) throw new Error(error.message);
   } catch (error) {
@@ -269,6 +270,7 @@ export async function createSavingsGoal(formData: FormData) {
     const targetMinor = asPositiveMinorAmount(formData.get("target"));
     const currentMinor = asMinorAmount(formData.get("current") || "0", { positive: false });
     const monthlyContributionMinor = asMinorAmount(formData.get("monthly") || "0", { positive: false });
+    const currency = asCurrency(formData.get("currency") || "KES");
     const targetDate = asText(formData.get("target_date"));
 
     if (!name) throw new Error("Savings goal name is required.");
@@ -281,7 +283,7 @@ export async function createSavingsGoal(formData: FormData) {
       current_minor: currentMinor,
       monthly_contribution_minor: monthlyContributionMinor,
       target_date: targetDate || null,
-      currency: "KES",
+      currency,
     });
     if (error) throw new Error(error.message);
   } catch (error) {
@@ -316,12 +318,13 @@ export async function createBusiness(formData: FormData) {
   try {
     const { supabase, user } = await requireUser();
     const name = asText(formData.get("name"));
+    const currency = asCurrency(formData.get("currency") || "KES");
     if (!name) throw new Error("Business name is required.");
 
     const { error } = await supabase.from("businesses").insert({
       owner_id: user.id,
       name,
-      currency: "KES",
+      currency,
     });
     if (error) throw new Error(error.message);
   } catch (error) {
