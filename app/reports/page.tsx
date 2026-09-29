@@ -34,7 +34,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
   const dailyTx = tx.filter(row => row.occurredOn === day);
   const monthlyTx = tx.filter(row => row.occurredOn >= firstDay && row.occurredOn <= lastDay);
   const daily = periodSummary(dailyTx);
-  const monthly = periodSummary(monthlyTx);
+  const monthlyByCurrency = currencies.map(currency => ({
+    currency,
+    summary: periodSummary(monthlyTx.filter(row => row.currency === currency)),
+  }));
   const categories = categoryTotals(dailyTx);
   const snapshotByCurrency = new Map((snapshots ?? []).map(s => [s.currency, s]));
   const currencies = Array.from(new Set((accounts ?? []).map(a => a.currency).concat(dailyTx.map(t => t.currency))));
@@ -77,7 +80,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Sear
           {reportRows.map(row => <div className="card" key={row.currency}><div className="section-head"><h2>{row.currency} daily report</h2><span className="status">{row.difference === null ? "No closing check" : row.difference === 0 ? "Reconciled" : "Difference found"}</span></div><div className="row"><ReportMetric title="Opening" value={formatMoney(row.opening, row.currency)} /><ReportMetric title="Income" value={formatMoney(row.incomeMinor, row.currency)} /><ReportMetric title="Expenses" value={formatMoney(row.expenseMinor, row.currency)} /><ReportMetric title="Expected closing" value={formatMoney(row.expected, row.currency)} /></div><p className="note">Amounts above are minor-unit-derived; use the stored currency for interpretation. {row.reported === null ? "No user-reported closing balance was stored." : row.difference === 0 ? "User-reported closing balance matches the calculated expectation." : "The reported closing balance differs by " + formatMoney(Math.abs(row.difference ?? 0), row.currency) + ". Review the snapshot rather than changing historical transactions."}</p></div>)}
         </section>
 
-        <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Monthly period</h2><span className="note">{firstDay} → {lastDay}</span></div><div className="row"><ReportMetric title="Income" value={formatMoney(monthly.incomeMinor, "KES")} /><ReportMetric title="Expenses" value={formatMoney(monthly.expenseMinor, "KES")} /><ReportMetric title="Net cash flow" value={formatMoney(monthly.netMinor, "KES")} /></div><div style={{ marginTop: 12 }}><form action={recordReportRun}><input type="hidden" name="report_type" value="monthly" /><input type="hidden" name="period_start" value={firstDay} /><input type="hidden" name="period_end" value={lastDay} /><button className="button" type="submit">Record monthly report run</button></form></div></section>
+        <section className="card" style={{ marginTop: 14 }}>
+          <div className="section-head"><h2>Monthly period</h2><span className="note">{firstDay} → {lastDay}</span></div>
+          {monthlyByCurrency.length === 0 ? <p className="note">No account currency is configured yet.</p> : <div className="grid content">{monthlyByCurrency.map(row => <div className="card" key={row.currency}><div className="section-head"><h2>{row.currency}</h2></div><div className="row"><ReportMetric title="Income" value={formatMoney(row.summary.incomeMinor, row.currency)} /><ReportMetric title="Expenses" value={formatMoney(row.summary.expenseMinor, row.currency)} /><ReportMetric title="Net cash flow" value={formatMoney(row.summary.netMinor, row.currency)} /></div></div>)}</div>}
+          <div style={{ marginTop: 12 }}><form action={recordReportRun}><input type="hidden" name="report_type" value="monthly" /><input type="hidden" name="period_start" value={firstDay} /><input type="hidden" name="period_end" value={lastDay} /><button className="button" type="submit">Record monthly report run</button></form></div>
+        </section>
 
         <section className="card" style={{ marginTop: 14 }}><div className="section-head"><h2>Daily report run</h2><span className="note">Timezone: Africa/Nairobi</span></div><form action={recordReportRun}><input type="hidden" name="report_type" value="daily" /><input type="hidden" name="period_start" value={day} /><input type="hidden" name="period_end" value={day} /><button className="button" type="submit">Record daily report run</button></form></section>
 
