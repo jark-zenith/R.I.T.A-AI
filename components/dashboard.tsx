@@ -50,7 +50,7 @@ export function Dashboard({
   transfers: Transfer[];
   message: string;
 }) {
-  const personal = summarizePersonalFlow(transactions.map(tx => ({ kind: tx.kind, amountMinor: tx.amount_minor })));
+  const personal = summarizePersonalFlow(transactions.filter(tx => tx.currency === defaultCurrency).map(tx => ({ kind: tx.kind, amountMinor: tx.amount_minor })));
   const balances = calculateAccountBalances(
     accounts.map(a => ({ id: a.id, currency: a.currency, openingBalanceMinor: a.opening_balance_minor })),
     transactions.map(tx => ({ accountId: tx.account_id, currency: tx.currency, kind: tx.kind, amountMinor: tx.amount_minor })),
@@ -91,9 +91,9 @@ export function Dashboard({
           {Array.from(currencyTotals.entries()).map(([currency, balance]) => (
             <Metric key={currency} label={"Recorded balance · " + currency} value={formatMoney(balance, currency)} />
           ))}
-          <Metric label="Recorded income" value={formatMoney(personal.incomeMinor)} />
-          <Metric label="Recorded expenses" value={formatMoney(personal.expenseMinor)} />
-          <Metric label="Net recorded flow" value={formatMoney(personal.netMinor)} />
+          <Metric label={"Recorded income · " + defaultCurrency} value={formatMoney(personal.incomeMinor, defaultCurrency)} />
+          <Metric label={"Recorded expenses · " + defaultCurrency} value={formatMoney(personal.expenseMinor, defaultCurrency)} />
+          <Metric label={"Net recorded flow · " + defaultCurrency} value={formatMoney(personal.netMinor, defaultCurrency)} />
         </section>
 
         <section className="card" style={{ marginTop: 14 }}>
