@@ -24,7 +24,7 @@ export default function LandingPage() {
         </div>
         <div className="row" style={{ marginTop: 18 }}>
           <Link className="button" href="/login">Sign in / Create account</Link>
-          <Link className="button" href="/privacy" style={{ background: "#111d25", color: "#edf4f7", border: "1px solid #29404b" }}>Privacy</Link>
+          <Link className="button" href="/privacy" style={{ background: "#111d25", color: "#edf4f7", border: "1px solid #29404b" }}>Privacy</Link><Link className="button" href="/terms" style={{ background: "#111d25", color: "#edf4f7", border: "1px solid #29404b" }}>Terms</Link>
         </div>
         <p className="note" style={{ marginTop: 16 }}>KES is the initial default currency. Other currencies are supported only when explicitly recorded.</p>
       </section>
